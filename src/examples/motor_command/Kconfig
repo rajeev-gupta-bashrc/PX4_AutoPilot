@@ -1,0 +1,4 @@
+menuconfig EXAMPLES_MOTOR_COMMAND
+	bool "motor_command_main"
+	default n
+	---help---

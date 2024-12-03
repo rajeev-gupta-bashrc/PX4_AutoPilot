@@ -74,6 +74,7 @@ set(msg_files
 	DifferentialPressure.msg
 	DistanceSensor.msg
 	DistanceSensorModeChangeRequest.msg
+	DroneState.msg
 	Ekf2Timestamps.msg
 	EscReport.msg
 	EscStatus.msg
