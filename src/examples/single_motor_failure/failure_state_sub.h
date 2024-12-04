@@ -45,10 +45,8 @@ public:
     ~StateSub() {}
 
     int main();
-
-    static px4::AppState appState; /* track requests to terminate app */
     long unsigned int prev_timestamp = 0;
-
+    static px4::AppState appState; /* track requests to terminate app */
 
 private:
 

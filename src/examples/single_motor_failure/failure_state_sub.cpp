@@ -54,6 +54,8 @@
 #include <iostream>  // For std::cout
 #include <cstdio>    // For printf
 #include <fstream>   // For std::ofstream
+#include <unistd.h>
+#include <stdio.h>
 #include <filesystem>
 
 
@@ -68,24 +70,22 @@ int StateSub::main(){
     int drone_state_sub = orb_subscribe(ORB_ID(drone_state));
     drone_state_s drone_state_data;
 
-    std::string baseFilePath = "/home/rajeev-gupta/ros2/inter-iit_ws/src/Inter-IIT_IdeaForge-PS/detection_tests/px4_detection_csv/odometry_data";
-    std::string filePath = baseFilePath;
-    int counter = 1;
+    std::string baseFilePath = "/home/rajeev-gupta/ros2/inter-iit_ws/src/Inter-IIT_IdeaForge-PS/detection_tests/px4_detection_csv/5states";
+    int counter = 0;
+    std::string filePath = baseFilePath + "_" + std::to_string(counter);
 
     // Check if the file exists and modify the filename if necessary
     while (std::filesystem::exists(filePath + ".csv")) {
-        filePath = baseFilePath + "_" + std::to_string(counter);
         counter++;
+        filePath = baseFilePath + "_" + std::to_string(counter);
     }
     filePath = filePath + ".csv";
 
-    // Open the file (it will be a new file or a modified filename)
     std::ofstream csvFile(filePath, std::ios::out | std::ios::trunc);
     if (!csvFile.is_open()) {
         std::cerr << "Failed to open CSV file." << std::endl;
         return -1; // Exit if file cannot be opened
     }
-
     // File is ready for writing
     std::cout << "Opened file: " << filePath << std::endl;
 
@@ -99,21 +99,28 @@ int StateSub::main(){
         csvFile  << drone_state_data.timestamp << ","
                  << drone_state_data.u1 << ","
                  << drone_state_data.u2 << ","
+                 << drone_state_data.u3 << ","
                  << drone_state_data.f1 << ","
                  << drone_state_data.f2 << ","
                  << drone_state_data.f3 << ","
+                 << drone_state_data.fsum << ","
+                 << drone_state_data.alt_error << ","
                  << drone_state_data.p_s << ","
                  << drone_state_data.q_s << ","
                  << drone_state_data.r_s << ","
                  << drone_state_data.n_x << ","
                  << drone_state_data.n_y << ","
                  << drone_state_data.n_z << ","
+                 << drone_state_data.nx_aor << ","
+                 << drone_state_data.ny_aor << ","
+                 << drone_state_data.nz_aor << ","
                  << drone_state_data.roll_rad << ","
                  << drone_state_data.pitch_rad << ","
                  << drone_state_data.yaw_rad << ","
                  << drone_state_data.x << ","
                  << drone_state_data.y << ","
-                 << drone_state_data.z << std::endl;
+                 << drone_state_data.z
+                 << std::endl;
         prev_timestamp = drone_state_data.timestamp;
     }
     csvFile.close(); // Close the file when done

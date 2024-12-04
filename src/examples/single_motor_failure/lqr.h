@@ -67,30 +67,35 @@ public:
     Matrix getA(double deltat);
 
 
-    //Vehicle Constants
+    //Physical Parameters
+    double l = 0.25;
     double I_xxt = 0.02166666666666667;
     double I_yyt = 0.02166666666666667;
     double I_zzt = 0.04000000000000001;
     double I_zzp = 1.1928e-4;
-    double l = 0.25;
 
+    //Aerodynamic Parameters
+    double k_tau = 0.016;
+    double gamma = 4.16e-4;
 
-
-
-    // Equilibrium state variables
-    double nx_eq;
-    double ny_eq;
-    double nz_eq = 0.9583;
+    //Equilibrium Values
     double p_eq;
     double q_eq;
-    double r_eq = -8.5;
-    double w1_eq = 738.0 ;
-    double w2_eq = 522.0 ;
-    double w3_eq =  738.0;
+    double r_eq;
+    double w1_eq = 738.0;
+    double w2_eq = 522.0;
+    double w3_eq = 738.0;
     double w4_eq = 0.0;
+    double nx_eq;
+    double ny_eq;
+    double nz_eq;
+    double z_eq = -10.0;
 
-   // A matrix variable
-    double a_const = ((I_xxt - I_zzt)*r_eq/I_xxt) + I_zzp*( w1_eq + w2_eq + w3_eq + w4_eq ) / I_xxt ;
+    //A matrix variables
+    double a_const;
+    double b_const;
+    double c_const;
+    double d_const;
 
 
 

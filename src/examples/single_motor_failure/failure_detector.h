@@ -42,6 +42,11 @@
 #include <px4_platform_common/app.h>
 #include <uORB/topics/vehicle_odometry.h>
 
+// #include <uORB/topics/vehicle_command_ack.h>
+// #include <uORB/topics/vehicle_command.h>
+// #include <uORB/topics/vehicle_status.h>
+
+
 class Detector
 {
 public:
@@ -87,8 +92,6 @@ public:
     void calculateAttitudeRates(int timestmp, double roll_rad, double pitch_rad, double yaw_rad);
     void detectFailure();
     void odometryUpdate(int vehicle_odometry_fd, vehicle_odometry_s &vehicle_odometry);
-
-
 
 
 private:

@@ -171,66 +171,163 @@ Vector LQR::vectorAdd(const Vector &a, const Vector &b) {
     return result;
 }
 
+Matrix LQR::getA(double deltat) {
+    // Matrix A = {
+    //     {       1, a_const, 0, 0},
+    //     {-a_const,       1, 0, 0},
+    //     {       0,  -nz_eq, 1, 0},
+    //     {   nz_eq,       0, 0, 1}
+    // };
+     Matrix A = {
+         {       1, a_const,   b_const, 0, 0},
+         {-a_const,       1,   c_const, 0, 0},
+         {       0,       0, d_const+1, 0, 0},
+         {       0,  -nz_eq,     ny_eq, 1, r_eq},
+         {   nz_eq,       0,    -nx_eq, -r_eq, 1}
+     };
+    return A;
+}
+
 Matrix LQR::getB(double deltat) {
+    // Matrix B = {
+    //     {            0,      l / I_xxt},
+    //     {    l / I_xxt,              0},
+    //     {            0,              0},
+    //     {            0,              0}
+    // };
+    // Matrix B = {
+    //     {            0,      l / I_xxt,             0},
+    //     {   -l / I_xxt,              0,    -l / I_xxt},
+    //     {k_tau / I_zzt, -k_tau / I_zzt, k_tau / I_zzt},
+    //     {            0,              0,             0},
+    //     {            0,              0,             0}
+    // };
     Matrix B = {
-        {0                  ,    l*deltat/ I_xxt},
-        {l*deltat/ I_xxt    ,                  0},
-        {0                  ,                  0},
-        {0                  ,                  0}
+        {            0,      l / I_xxt,             0},
+        {    l / I_xxt,              0,             0},
+        {            0, -k_tau / I_zzt, k_tau / I_zzt},
+        {            0,              0,             0},
+        {            0,              0,             0}
     };
     return B;
 }
 
-Matrix LQR::getA(double deltat) {
-    Matrix A = {
-        {0+1                ,a_const*deltat      ,    0             ,                 0},
-        {-a_const*deltat  ,0 +1                  ,    0             ,                 0},
-        {0                ,-nz_eq*deltat      ,    0   +1          ,       r_eq*deltat},
-        {nz_eq*deltat     ,0                   ,  -r_eq*deltat    ,                 0 + 1}
-    };
-    return A;
-}
-
 
 Vector LQR::lqr(const Vector &actual_state, const Vector &desired_state, const Matrix &Q, const Matrix &R, const Matrix &A, const Matrix &B, double dt) {
+
+
     Vector x_error = actual_state;
     for (size_t i = 0; i < actual_state.size(); ++i) {
-        x_error[i] = (desired_state[i] - actual_state[i]);
+        x_error[i] = desired_state[i] - actual_state[i];
     }
+
+    // int N = 500;
+    // std::vector<Matrix> P(N + 1);
+    // P[N] = Q;
+    // Matrix P_next = Q;
+
+    // for (int i = N; i > 0; --i) {
+
+
+    //     Matrix P_current = matrixAdd(Q, multiply(transpose(A), multiply(P_next, A)));
+    //     P_current = matrixSubtract(P_current,
+    //                  multiply(multiply(transpose(A), multiply(P_next, B)),
+    //                  multiply(inverse2x2(matrixAdd(R, multiply(transpose(B), multiply(P_next, B)))),
+    //                  multiply(transpose(B), multiply(P_next, A)))));
+    //     P[i - 1] = P_current;
+    //     P_next = P_current;
+    // }
+
     Matrix K;
     Vector u;
 
-    // K = {{ -9.566987799048773e-16, 0.588213695875172, -5.0850384014349945, -37.615644370919675 },
-    //  { 0.5882136958751719, 9.687075512007543e-16, -37.61564437091968, 5.08503840143499 }};       //rho = 0.53
-    // K = {{ -1.3009502237200213e-16, 1.315762738415036, -3.008772667752987, -9.21522612703843 },
-    //  { 1.315762738415035, 4.002923765292373e-17, -9.215226127038402, 3.0087726677529867 }};       //rho = 0.33
-    // K = {{ 0.21087984342956764, 3.304121854415287, -6.310767885888993, -9.666700314309152 },
-    //  { 2.623361365649567, 0.2108798434295682, -11.519430165261205, 10.954749205791732 }};   //rho = 1.24
-    // K = {{ 1.8013156943815674e-16, 1.0197757223020965, -2.9626391764975972, -6.5812766299717165 },
-    //  { 1.019775722302095, 9.006578471907837e-17, -6.581276629971724, 2.962639176497599 }};          //rho = 0.8937820376119587
-    // K = {{ -0.2933665382353208, 2.262488091733113, -15.424404213739042, -9.183808675393825 },
-    //  { 3.8695272638412597, -0.2933665382353237, -8.627435916948276, 5.910235135594249 }};          //rho = 1.32
+    // K = multiply(inverse2x2(matrixAdd(R, multiply(transpose(B), multiply(P[N], B)))),
+    //                  multiply(transpose(B), multiply(P[N], A)));
 
-    // K = {{ -2.052599442467586e-15, 4.894330457577658, -10.939222704494966, -32.51680107335382 },
-    //  { 4.894330457577662, 9.951997296812538e-16, -32.516801073353875, 10.939222704495007 }};     //IRIS RHO=1.28
-    // K = {{ 0.6054503996511734, 13.085503321306403, -10.409305389211733, -24.86456678689718 },
-    //  { 11.540789078053141, 0.5219970386634336, -22.24679861238172, 36.045848747737644 }};  //IRIS RHO=1.28 well and good
-    K = {{ 0.7604957888197689, 14.915744438424122, -10.338666088015943, -24.43673459546383 },
-     { 11.650618106028348, 0.229400126528235, -21.547359765479555, 37.52883999916331 }};  //IRIS RHO=1.28
 
+    // K = { {-8.00641604e-17,  2.91835387e+00, -4.75855745e+00, -7.05048669e-01},
+    //     { 2.91835387e+00, -3.00240602e-17, -7.05048669e-01,  4.75855745e+00} };
+
+    // K = { {-1.20096241e-16,  2.23534736e+00, -2.44976309e+00, -4.83194352e-01} ,
+    //     { 2.23534736e+00, -8.00641604e-17, -4.83194352e-01,  2.44976309e+00 } };
+
+// K = {
+//   {1.36716834e-02, -1.83232922e+00, 1.57208984e+00, 5.57003129e+00, 1.01627901e+00},
+//   {2.64825271e+00, 1.38475409e-01, -3.46629984e-01, -1.71082611e+00, 7.23063172e+00},
+//   {3.64585536e-01, 1.90629226e+00, 2.16782078e+00, -5.49295879e+00, 1.93671812e-01}
+// };////////////
+/////////////////////////////////////////////////////////////////////////////////////////
+K = {
+  {-3.31812040e-02, -4.21937270e-01, 5.36364498e-01, 6.35371466e-01, 6.31023742e-01},
+  {4.55570092e-01, 2.92259473e-02, -5.68221882e-01, -7.48228833e-01, 5.84679071e-01},
+  {6.02633476e-02, 4.56929927e-01, 8.18210808e-01, -7.01855853e-01, -6.19868705e-01}
+};
+/////////////////////////////////////////////////////////////////////////////////////////
+// K = {
+//   {2.27601031e-01, -1.47766670e+00, 1.17366970e+00, 9.25998646e-02, 1.76236621e+01},
+//   {1.68457595e+00, -1.27551542e-01, -9.63183577e-01, -1.84689001e+01, 1.23068656e+00},
+//   {-2.30890922e-01, 1.27427783e+00, 7.45776111e-01, 1.61223544e+00, -1.11789752e+01}
+// };
+// K = {
+//   {-4.43266426e-02, -5.44778759e-01, 6.97352733e-01, 9.60988199e-01, 6.30511573e-01},
+//   {6.21137551e-01, 4.79389961e-02, -6.68257243e-01, -8.33718514e-01, 9.57717784e-01},
+//   {1.14067878e-01, 6.07295288e-01, 1.20088846e+00, -1.08615557e+00, -5.60981430e-01}
+// };
+// K = {
+//   {4.47297951e-02, -1.59090181e+00, 2.79972462e+00, 4.80795030e+00, 1.06729509e+00},
+//   {2.33608871e+00, 5.12540238e-02, -3.09606149e-02, -2.12171378e+00, 6.30177019e+00},
+//   {1.55801541e-01, 1.59946551e+00, 3.04675439e+00, -4.71460899e+00, -5.99597996e-01}
+// };
+
+// K = {
+//   {2.19163548e+02, 3.38218496e-01, 2.74832931e-01, -2.58023307e+04, 5.48426257e+01, 9.19752393e-02, 4.00327687e-01},
+//   {1.72839919e-01, 2.43313798e+00, -3.05486336e+00, -2.00199283e+01, -1.11416187e+03, -1.38076174e-06, 2.41012752e-05},
+//   {2.21281953e+02, 4.94994559e-01, 2.60530812e-01, -2.52153671e+04, 4.73425619e+01, 9.38969177e-02, 4.08691545e-01}
+// };
     u = multiply(K, x_error);
+
+    // printMatrix(K);
+
     return u;
 }
 
 Vector LQR::getControlInputs(Vector actual_state, int detected_motor, double nx_des, double ny_des) {
 
-    if(detected_motor == 1 || detected_motor == 3){
-        r_eq = +8.5;
-        a_const = ((I_xxt - I_zzt)*r_eq/I_xxt) + I_zzp*( w1_eq + w2_eq + w3_eq + w4_eq ) / I_xxt ;
+    if(detected_motor == 1){
+        p_eq = 0.0;
+        q_eq = 2.53;
+        r_eq = 8.5;
+        a_const = ((I_xxt - I_zzt) * r_eq / I_xxt) + I_zzp * (w1_eq + w2_eq + w3_eq + w4_eq) / I_xxt;
+        b_const = (I_xxt - I_zzt) * q_eq / I_xxt;
+        c_const = (I_zzt - I_xxt) * p_eq / I_xxt;
+        d_const = -gamma/I_zzt;
     }
-    else{
+    if(detected_motor == 2){
+        /////////////////p_eq = 0.0;
+        /////////////////q_eq = -2.53;
         r_eq = -8.5;
-        a_const = ((I_xxt - I_zzt)*r_eq/I_xxt) + I_zzp*( w1_eq + w2_eq + w3_eq + w4_eq ) / I_xxt ;
+        a_const = ((I_xxt - I_zzt) * r_eq / I_xxt) + I_zzp * (w1_eq + w2_eq + w3_eq + w4_eq) / I_xxt;
+        /////////////////b_const = (I_xxt - I_zzt) * q_eq / I_xxt;
+        /////////////////c_const = (I_zzt - I_xxt) * p_eq / I_xxt;
+        /////////////////d_const = -gamma/I_zzt;
+    }
+    if(detected_motor == 3){
+        ///////////////p_eq = 2.53;
+        ///////////////q_eq = 0.0;
+        r_eq = 8.5;
+        a_const = ((I_xxt - I_zzt) * r_eq / I_xxt) + I_zzp * (w1_eq + w2_eq + w3_eq + w4_eq) / I_xxt;
+        ///////////////b_const = (I_xxt - I_zzt) * q_eq / I_xxt;
+        ///////////////c_const = (I_zzt - I_xxt) * p_eq / I_xxt;
+        ///////////////d_const = -gamma/I_zzt;
+    }
+    if(detected_motor == 4){
+        //////////////p_eq = -2.53;
+        //////////////q_eq = 0.0;
+        r_eq = -8.5;
+        a_const = ((I_xxt - I_zzt) * r_eq / I_xxt) + I_zzp * (w1_eq + w2_eq + w3_eq + w4_eq) / I_xxt;
+        //////////////b_const = (I_xxt - I_zzt) * q_eq / I_xxt;
+        //////////////c_const = (I_zzt - I_xxt) * p_eq / I_xxt;
+        //////////////d_const = -gamma/I_zzt;
     }
 
     double dt = 1;
@@ -239,39 +336,42 @@ Vector LQR::getControlInputs(Vector actual_state, int detected_motor, double nx_
 
 
     if(detected_motor == 1){
-        desired_state = {0.0, 2.25361451700798, nx_des, ny_des};
-        // desired_state = {0.0, 1.9644959812893703, nx_des, ny_des};
-        //desired_state = {0.0, 6.29369911312751, 0.0, 0.29394435248697914};
-        // when outer loop control is working
-        // desired_state = {0.0, 6.29369911312751, nx_des, ny_des};
-        // desired_state = {0.0, 10.421486739437066, nx_des, ny_des};
-        // desired_state = {0.0, 11.153835166845344, nx_des, ny_des};
-        // desired_state = {0.0, 13.901672761162269, 0.0, 0.7079288615564396};
-        // desired_state = {0.0, 13.901672761162269, nx_des, ny_des};
-
+     desired_state = {0.0, 2.25361451700798, 11.694423666728527, 0.0, 0.1892};
+    //  desired_state = {0.0, 2.53, 10, nx_des, ny_des, -10.0, 0.0};
     }
     else if (detected_motor == 2)
     {
      desired_state = {0.0, -2.53, 0.0, 0.2855};
+    //////////////desired_state = {0.0, -2.53, -8.5, 0.0, 0.2855};
     }
     else if (detected_motor == 3)
     {
      desired_state = {2.53, 0.0, -0.2855, 0.0};
+    //////////////desired_state = {2.53, 0.0, 8.5, -0.2855, 0.0};
     }
     else if(detected_motor == 4)
     {
      desired_state = {-2.53, 0.0, 0.2855, 0.0};
+    //////////////desired_state = {-2.53, 0.0, -8.5, 0.2855, 0.0};
     }
 
 
 
-    Matrix R = {{1   ,  0},
-                {0   ,  1}};
+    // Matrix R = {{ 1,  0},
+    //             { 0,  1}};
+    Matrix R = {{ 1,  0,  0},
+               { 0,  1,  0},
+                { 0,  0,  1}};
 
-    Matrix Q = {{1     ,0      ,0     ,0},
-                {0     ,1      ,0     ,0},
-                {0     ,0      ,20    ,0},
-                {1     ,0      ,0    ,20}};
+    // Matrix Q = {{1, 0,  0,  0},
+    //             {0, 1,  0,  0},
+    //             {0, 0, 20,  0},
+    //             {0, 0,  0, 20}};
+    Matrix Q = {{1, 0, 0,  0,  0},
+                {0, 1, 0,  0,  0},
+                {0, 0, 0,  0,  0},
+                {0, 0, 0, 20,  0},
+                {0, 0, 0,  0, 20}};
 
 
 
@@ -280,7 +380,9 @@ Vector LQR::getControlInputs(Vector actual_state, int detected_motor, double nx_
             state_error[j] -= desired_state[j];
     }
 
-    Vector desired_state_error = {0.0,  0.0,   0.0,   0.0};
+    // Vector desired_state_error = {0.0,  0.0,   0.0,  0.0};
+    // Vector desired_state_error = {0.0,  0.0,   0.0,   0.0,  0.0, 0.0, 0.0};
+    Vector desired_state_error = {0.0,  0.0,   0.0,   0.0,  0.0};
 
 
     Matrix A = getA(dt);
@@ -290,5 +392,4 @@ Vector LQR::getControlInputs(Vector actual_state, int detected_motor, double nx_
 
     return optimal_control_input;
 }
-
 

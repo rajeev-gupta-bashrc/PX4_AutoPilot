@@ -53,7 +53,7 @@
 #include <uORB/topics/actuator_motors.h>
 #include <uORB/topics/vehicle_odometry.h>
 #include <uORB/topics/vehicle_attitude.h>
-// #include <uORB/topics/drone_state.h>
+#include <uORB/topics/drone_state.h>
 
 #include <thread>
 #include <mutex>
@@ -82,9 +82,9 @@ struct State {
 
     double nx_des = 0.0;
     double ny_des = 0.0;
-    double nz_des = -1.0;
+    double nz_des = 1.0;
 
-    double fsum = 10.0;           //initialisation
+    double fsum = 11.0;
 };
 
 State shared_state;
@@ -94,31 +94,46 @@ std::mutex shared_state_mutex; // Mutex to protect shared state
 // Outer loop: Position control
 void Controller::outerLoop() {
 
+    // {
+    //     std::lock_guard<std::mutex> lock(shared_state_mutex); // Lock mutex for shared state
+    //     int detected_motor = shared_state.detected_motor;
+    // }
     int vehicle_odometry_fd = orb_subscribe(ORB_ID(vehicle_odometry));
     vehicle_odometry_s odometry;
 
-    Vector desired_position = {0.0 , 0.0 , -10};
+    Vector desired_position = {0.0 , 0.0 , -12};
     Vector current_position = {0.0 , 0.0 , 0.0};
     Vector pos_deviation = {0.0 , 0.0 , 0.0};
 
     Vector desired_accel_plus  = {0.0 , 0.0 , 0.0};
 
-    double alt_error;
-    double fsum=0.0;
+    double nx_des = 0.0;
+    double ny_des = 0.0;
+    double nz_des = 1.0;
+    double fsum = 11.0;
+    double alt_error;////
 
-    // Vector nat_freq = {1, 1, 1};
-    // Vector damping_const = {0.7, 0.7, 0.7};
-    // Vector nat_freq = {1.5, 1.5, 2.5};           //good
-    // Vector nat_freq = {1.5, 1.5, 3};
-    Vector nat_freq = {1.5, 1.5, 3};
-    Vector damping_const = {0.7, 0.7, 0.7};
+    // double kp = 1;
+    // double nat_freq = 1.5;
+    // double damping_const = 0.7;
+
+    // Vector nat_freq = {0.0, 0.0, 1.0};
+    // Vector damping_const = {0.0, 0.0, 0.0};
+
+    Vector Kp = {0.0, 0.0, 4};
+    Vector Kd = {0.0, 0.0, 0.0};
 
     // double* rpy_rad;
+
+    // double roll_rad;
+    // double pitch_rad;
+    // double yaw_rad;
+
+    // double* rpy_plus;
 
     Vector desired_position_plus = {0.0 , 0.0 , 0.0};
     Vector current_velocity_plus = {0.0 , 0.0 , 0.0};
     Vector current_position_plus = {0.0 , 0.0 , 0.0};
-
 
 
     while (true) {
@@ -128,9 +143,17 @@ void Controller::outerLoop() {
 
         // rpy_rad = quaternionToRPY(odometry.q[0], odometry.q[1], odometry.q[2], odometry.q[3]);
 
+        // roll_rad = rpy_rad[0];
+        // pitch_rad = rpy_rad[1];
+        // yaw_rad = rpy_rad[2];
+
+
+
         current_position[0] = (double)odometry.position[0];
         current_position[1] = (double)odometry.position[1];
         current_position[2] = (double)odometry.position[2];
+
+        desired_position[2] = current_position[2] - 1;
 
         current_position_plus = vectorFRD2Plus(current_position);
         desired_position_plus = vectorFRD2Plus(desired_position);
@@ -148,38 +171,63 @@ void Controller::outerLoop() {
         // desired_accel_plus[1] = -2*damping_const*nat_freq*(double)odometry.velocity[1] - nat_freq*nat_freq*pos_deviation[1];
         // desired_accel_plus[2] = -2*damping_const*nat_freq*(double)odometry.velocity[2] - nat_freq*nat_freq*pos_deviation[2];
 
-        desired_accel_plus[0] = -2*damping_const[0]*nat_freq[0]*(double)current_velocity_plus[0] - nat_freq[0]*nat_freq[0]*pos_deviation[0];
-        desired_accel_plus[1] = -2*damping_const[1]*nat_freq[1]*(double)current_velocity_plus[1] - nat_freq[1]*nat_freq[1]*pos_deviation[1];
-        desired_accel_plus[2] = -2*damping_const[2]*nat_freq[2]*(double)current_velocity_plus[2] - nat_freq[2]*nat_freq[2]*pos_deviation[2];
+        // desired_accel_plus[0] = -2*damping_const[0]*nat_freq[0]*(double)current_velocity_plus[0] - nat_freq[0]*nat_freq[0]*pos_deviation[0];
+        // desired_accel_plus[1] = -2*damping_const[1]*nat_freq[1]*(double)current_velocity_plus[1] - nat_freq[1]*nat_freq[1]*pos_deviation[1];
+        // desired_accel_plus[2] = -2*damping_const[2]*nat_freq[2]*(double)current_velocity_plus[2] - nat_freq[2]*nat_freq[2]*pos_deviation[2];
 
+        desired_accel_plus[0] = -Kd[0]*(double)current_velocity_plus[0] - Kp[0]*pos_deviation[0];
+        desired_accel_plus[1] = -Kd[1]*(double)current_velocity_plus[1] - Kp[1]*pos_deviation[1];
+        desired_accel_plus[2] = -Kd[2]*(double)current_velocity_plus[2] - Kp[2]*pos_deviation[2];
 
         desired_accel_plus[2]+= 9.8; // d_des - g
 
-        Vector ndes_g = desired_accel_plus;
-        ndes_g[0] = ndes_g[0] * (mass / nz_bar);
-        ndes_g[1] = ndes_g[1] * (mass / nz_bar);
-        ndes_g[2] = ndes_g[2] * (mass / nz_bar);
 
-        fsum = calculateNorm(ndes_g);
-        ndes_g[0] = ndes_g[0] / fsum;
-        ndes_g[1] = ndes_g[1] / fsum;
-        ndes_g[2] = ndes_g[2] / fsum;
+        printf("Desired Accel = %f %f %f \n", desired_accel_plus[0], desired_accel_plus[1], desired_accel_plus[2]);
+
+        desired_accel_plus[2] = (desired_accel_plus[2] < 0) ? 0 : desired_accel_plus[2];
+
+        // rpy_plus = rpy_rate_plus(roll_rad, pitch_rad , yaw_rad);
+
+        // Vector ndes = multiply(calculateRotationMatrixInverse(rpy_plus[0],rpy_plus[1],rpy_plus[2]), desired_accel);
+        Vector ndes = desired_accel_plus;
+        // Vector ndes = multiply(calculateRotationMatrixInverse(roll_rad,pitch_rad,yaw_rad), desired_accel_plus);
+        ndes[0] = ndes[0] * (1.535 / 0.982);
+        ndes[1] = ndes[1] * (1.535 / 0.982);
+        ndes[2] = ndes[2] * (1.535 / 0.982);
+        // ndes[0] = ndes[0] * (2.0 / 0.982);
+        // ndes[1] = ndes[1] * (2.0 / 0.982);
+        // ndes[2] = ndes[2] * (2.0 / 0.982);
+        printf("desired n before normalizing = %f %f %f \n", ndes[0], ndes[1], ndes[2]);
+
+        fsum = calculateNorm(ndes);
+
+        ndes[0] = ndes[0] / fsum;
+        ndes[1] = ndes[1] / fsum;
+        ndes[2] = ndes[2] / fsum;
+
+        nx_des = ndes[0];
+        ny_des = ndes[1];
+        nz_des = ndes[2];
+
+        printf("desired AOR = %f %f %f \n", nx_des, ny_des, nz_des);
 
         alt_error = pos_deviation[2];
 
         {
         std::lock_guard<std::mutex> lock(shared_state_mutex); // Lock mutex for shared state
-        shared_state.nx_des = ndes_g[0];
-        shared_state.ny_des = ndes_g[1];
-        shared_state.nz_des = ndes_g[2];
+        state_data.nx_aor = nx_des;
+        state_data.ny_aor = ny_des;
+        state_data.nz_aor = nz_des;
+        shared_state.nx_des = nx_des;
+        shared_state.ny_des = ny_des;
+        shared_state.nz_des = nz_des;
         shared_state.fsum = fsum;
 
         shared_state.alt_error = alt_error;
         }
 
-        // usleep(1000);
-        // usleep(2000);            //best
-        usleep(4000);
+        // Unlock automatically when lock_guard goes out of scope
+        usleep(2000); // Sleep for 100 ms
     }
 
 
@@ -188,6 +236,19 @@ void Controller::outerLoop() {
 
 // Inner loop: Velocity control
 void Controller::innerLoop() {
+    // while (true) {
+
+    //     {
+    //     std::lock_guard<std::mutex> lock(state_mutex);
+    //     state.check_flag++;
+    //     printf("Inner Loop flag = %d \n",state.check_flag);
+    //     }
+
+
+    //     // Mutex is released automatically when lock_guard goes out of scope
+
+    //     usleep(500000); // Sleep for 10 ms
+    // }
     int detected_motor;
      {
         std::lock_guard<std::mutex> lock(shared_state_mutex); // Lock mutex for shared state
@@ -209,7 +270,11 @@ void Controller::innerLoop() {
 
     double* rpy_rad;
 
-    double* normal_body_frame;
+    double roll_rad;
+    double pitch_rad;
+    double yaw_rad;
+
+    double* normal;
     double n_x;
     double n_y;
     double n_z;
@@ -227,6 +292,7 @@ void Controller::innerLoop() {
 
     double u1;
     double u2;
+    double u3;
     double f1;                  //      Anticlockwise first motor to the failed
     double f2;                  //      Opposite to failed modtor
     double f3;                  //      Clockwise first motor to the failed
@@ -249,6 +315,10 @@ void Controller::innerLoop() {
 
         rpy_rad = quaternionToRPY(odometry.q[0], odometry.q[1], odometry.q[2], odometry.q[3]);
 
+        roll_rad = rpy_rad[0];
+        pitch_rad = rpy_rad[1];
+        yaw_rad = rpy_rad[2];
+
         roll_rate = odometry.angular_velocity[0];
         pitch_rate = odometry.angular_velocity[1];
         yaw_rate = odometry.angular_velocity[2];
@@ -270,43 +340,71 @@ void Controller::innerLoop() {
             axis_of_rotation[0] = shared_state.nx_des;
             axis_of_rotation[1] = shared_state.ny_des;
             axis_of_rotation[2] = shared_state.nz_des;
-            f_sigma = shared_state.fsum;
-            normal_body_frame = AorBodyFrame(q_inverse, axis_of_rotation);
+            normal = AorBodyFrame(q_inverse, axis_of_rotation);
         }
-        n_x = normal_body_frame[0];
-        n_y = normal_body_frame[1];
-        n_z = normal_body_frame[2];
+        n_x = normal[0];
+        n_y = normal[1];
+        n_z = normal[2];
 
-        current_state = {p_s, q_s, n_x, n_y};        // Get current state
+        // current_state = {p_s, q_s, n_x, n_y};        // Get current state
+        current_state = {p_s, q_s, r_s, n_x, n_y};        // Get current state
+        // current_state = {p_s, q_s, r_s, n_x, n_y, odometry.position[2], odometry.velocity[2]};        // Get current state
 
 
-        inputs = lqr.getControlInputs(current_state, detected_motor, nx_bar, ny_bar);     // Apply LQR controller
+        // if (abs(yaw_rate) < 20 && odometry.position[2] < -2.5f)
+        // {
+        //     inputs = lqr.getControlInputs(current_state, detected_motor , 2);
+        //     u1 = inputs[0];
+        //     f3 = (u1 + 20.0)/2;
+        //     f1 = (20.0 -u1)/2;
+
+        //      act.control[0] = (float)nan("1");
+        //      act.control[1] = (float)nan("1");
+        //      act.control[2] = f1/14.56;
+        //      act.control[3] = f3/14.56;
+
+        //      printf("Two motors only , yaw_rate = %f  f1 = %f  f2 = %f , u = %f \n",yaw_rate,f1, f3,inputs[0]);
+        //      printf("state p = %f, q = %f, r = %f, n_x = %f, n_y = %f, n_z = %f \n", p_s, q_s, yaw_rate, n_x, n_y, n_z);
+        // }
+
+// {
+        // std::lock_guard<std::mutex> lock(shared_state_mutex); // Lock mutex for shared state
+        inputs = lqr.getControlInputs(current_state, detected_motor, 0.0, 0.1892);     // Apply LQR controller
+        // inputs = lqr.getControlInputs(current_state, detected_motor, 0.0,  0.2855);     // Apply LQR controller
+
+//   }
+
 
         u1 = inputs[0];
         u2 = inputs[1];
-        // u3 = inputs[2];
+        u3 = inputs[2];
 
+        // signal = 9.3 + 0.1*((double)odometry.position[2] + 10);
 
         // Thrust equations after solving input relation
         ///////////////////////////////////////////////////////////
         // f2 = u2 + 8.83/2;
         // f1 = ( 8.83 - (u1 + u2)/2 > 0) ? 8.83 - (u1 + u2)/2 : 0.0 ;
         // f3 = (8.83 + (u1 - u2)/2 > 14.56 ) ? 14.56 : 8.83 + (u1 - u2)/2  ;
-        // // for outer loop control
-        f1 = (f_sigma - (u1+u2+f2_bar)) / 2;
-        f2 = u2 + f2_bar;
-        f3 = f1 + u1;
         ////////////////////////////////////////////////////////////
 
         //////////////////////////////
-        // f1 = u1 + shared_state.fsum * (1.28 / (1 + (2 * 1.28)));
-        // f2 = u2 + shared_state.fsum * (1 / (1 + (2 * 1.28)));
-        // f3 = u3 + shared_state.fsum * (1.28 / (1 + (2 * 1.28)));
+        f1 = u1 + shared_state.fsum * (1.28 / (1 + (2 * 1.28)));
+        f2 = u2 + shared_state.fsum * (1 / (1 + (2 * 1.28)));
+        f3 = u3 + shared_state.fsum * (1.28 / (1 + (2 * 1.28)));
 
-        (f1 < 0) ? f1 = 0 : (f1 > fmax) ? f1 = fmax : f1 = f1;
-        (f2 < 0) ? f2 = 0 : (f2 > fmax) ? f2 = fmax : f2 = f2;
-        (f3 < 0) ? f3 = 0 : (f3 > fmax) ? f3 = fmax : f3 = f3;
+        (f1 < 0) ? f1 = 14.13 : (f1 > 14.13) ? f1 = 14.13 : f1 = f1;
+        (f2 < 0) ? f2 = 14.13 : (f2 > 14.13) ? f2 = 14.13 : f2 = f2;
+        (f3 < 0) ? f3 = 14.13 : (f3 > 14.13) ? f3 = 14.13 : f3 = f3;
         //////////////////////////////
+
+        // f2 = u2 + (9.4/2);
+        // f1 = ( 9.4 - (u1 + u2)/2 > 0) ? 9.4 - (u1 + u2)/2 : 0.0 ;
+        // f3 = (9.4 + (u1 - u2)/2 > 14.56 ) ? 14.56 : 9.4 + (u1 - u2)/2  ;
+
+        // f2 = u2 + (signal/2);
+        // f1 = ( signal - (u1 + u2)/2 > 0) ? signal - (u1 + u2)/2 : 0.0 ;
+        // f3 = (signal + (u1 - u2)/2 > 14.56 ) ? 14.56 : signal + (u1 - u2)/2  ;
 
         // Apply control for different cases of failure
         // Use only two opposite motors first to accelerate to desired yaw rate and then apply control
@@ -318,9 +416,9 @@ void Controller::innerLoop() {
 
         if(detected_motor == 1){
         act.control[0] = (float)nan("1");
-        act.control[1] = f2/fmax;
-        act.control[2] = f1/fmax;
-        act.control[3] = f3/fmax;
+        act.control[1] = f2/ 14.13;
+        act.control[2] = f1/14.13;
+        act.control[3] = f3/14.13;
 
         // act.control[1] = f2/ 14;
         // act.control[2] = f1/ 14;
@@ -359,30 +457,38 @@ void Controller::innerLoop() {
         state_data.timestamp = odometry.timestamp;
         state_data.u1 = u1;
         state_data.u2 = u2;
+        state_data.u3 = u3;
         state_data.f1 = f1;
         state_data.f2 = f2;
         state_data.f3 = f3;
+        state_data.fsum = shared_state.fsum;
+        state_data.alt_error = shared_state.alt_error;
         state_data.p_s = p_s;
         state_data.q_s = q_s;
-        state_data.r_s = r_s;
+        state_data.r_s = yaw_rate;
         state_data.n_x = n_x;
         state_data.n_y = n_y;
         state_data.n_z = n_z;
-        state_data.roll_rad = (double)rpy_rad[0];
-        state_data.pitch_rad = (double)rpy_rad[1];
-        state_data.yaw_rad = (double)rpy_rad[2];
+        state_data.roll_rad = roll_rad;
+        state_data.pitch_rad = pitch_rad;
+        state_data.yaw_rad = yaw_rad;
         state_data.x = (double)odometry.position[0];
         state_data.y = (double)odometry.position[1];
         state_data.z = (double)odometry.position[2];
 
-        printf("-----------------\n");
-        printf("u1 = %f, u2 = %f, f1 = %f , f2 = %f , f3 = %f , f_sigma = %f \n",u1, u2,f1, f2, f3, shared_state.fsum);
-        // printf("u1 = %f, u2 = %f, u3 = %f, f1 = %f , f2 = %f , f3 = %f , f_sigma = %f \n",u1, u2,f1, f2, f3, f_sigma);
-        printf("state p = %f, q = %f, r = %f, n_x = %f, n_y = %f, n_z = %f \n", p_s, q_s, r_s, n_x, n_y, n_z);
-        printf("roll = %f pitch = %f yaw = %f timestamp = %d\n", rpy_rad[0], rpy_rad[1], rpy_rad[2], odometry.timestamp);
-        printf("x = %f, y = %f, z = %f \n", (double)odometry.position[0],(double)odometry.position[1],(double)odometry.position[2]);
+        // printf("-----------------\n");
+        // printf("u1 = %f, u2 = %f, u3 = %f, f1 = %f , f2 = %f , f3 = %f , fsum = %f, alt error = %f  \n",u1, u2, u3,f1, f2, f3, shared_state.fsum, shared_state.alt_error);
+        // printf("state p = %f, q = %f, r = %f, n_x = %f, n_y = %f, n_z = %f \n", p_s, q_s, yaw_rate, n_x, n_y, n_z);
+        // printf("roll = %f pitch = %f yaw = %f timestamp = %d\n", roll_rad, pitch_rad, yaw_rad, odometry.timestamp);
+        // printf("x = %f, y = %f, z = %f \n", (double)odometry.position[0],(double)odometry.position[1],(double)odometry.position[2]);
         // printf("nx_des = %f, ny_des = %f, ny_des = %f", shared_state.nx_des, shared_state.ny_des, shared_state.nz_des);
-        printf("\n\n");
+        // printf("\n\n");
+
+        // printf("u1 = %f, u2 = %f, u3 = %f , f1 = %f , f2 = %f , f3 = %f , fsum = %f, alt error = %f yaw_rate = %f   \n",u1, u2 ,u3, f1, f2, f3, f1+f2+f3, shared_state.alt_error, yaw_rate );
+        // printf("state p = %f, q = %f, r = %f, n_x = %f, n_y = %f, n_z = %f \n", p_s, q_s, r_s, n_x, n_y, n_z);
+        // printf("roll = %f pitch = %f yaw = %f timestamp = %d\n", roll_rad, pitch_rad, yaw_rad, odometry.timestamp);
+        // printf("x = %f, y = %f, z = %f  signal = %f \n", (double)odometry.position[0],(double)odometry.position[1],(double)odometry.position[2],signal);
+        // printf("nx_des = %f, ny_des = %f, nz_des = %f");
 
         }
 
@@ -394,7 +500,7 @@ void Controller::innerLoop() {
         act.control[diagonally_working_2] = 0.67;
         printf("Two motors only , yaw_rate = %f\n",yaw_rate);
         printf("state p = %f, q = %f, r = %f, n_x = %f, n_y = %f, n_z = %f \n", p_s, q_s, yaw_rate, n_x, n_y, n_z);
-        printf("roll = %f pitch = %f yaw = %f timestamp = %d\n", rpy_rad[0], rpy_rad[1], rpy_rad[2], odometry.timestamp);
+        printf("roll = %f pitch = %f yaw = %f timestamp = %d\n", roll_rad, pitch_rad, yaw_rad, odometry.timestamp);
         }
 
         else if(odometry.position[2] > -2.5f)
@@ -405,15 +511,18 @@ void Controller::innerLoop() {
         act.control[3] = 0;
         }
 
+        // printf("Alt = %f \n" , (double)odometry.position[2]);
+
+
         orb_publish(ORB_ID(actuator_motors), act_pub_fd, &act);
         orb_publish(ORB_ID(drone_state), drone_state_publisher, &state_data);
 
-        // {
-        // std::lock_guard<std::mutex> lock(shared_state_mutex); // Lock mutex for shared state
-        // shared_state.nx_des = 0.0;
-        // shared_state.ny_des = 0.0;
-        // shared_state.nz_des = 1.0;
-        // }
+        {
+        std::lock_guard<std::mutex> lock(shared_state_mutex); // Lock mutex for shared state
+        shared_state.nx_des = 0.0;
+        shared_state.ny_des = 0.0;
+        shared_state.nz_des = 1.0;
+        }
 
 
 
@@ -707,6 +816,7 @@ double* Controller::vectorQuaternionTransformation (double* q, double* v){
     q_dash[3] = -1.0 * q[3];
 
     new_v_q = hamiltonianProduct(hamiltonianProduct(q, v_q), q_dash);
+    // new_v_q = hamiltonianProduct(hamiltonianProduct(q_dash, v_q), q);
 
     new_v[0] = new_v_q[1];
     new_v[1] = new_v_q[2];
@@ -718,37 +828,6 @@ double* Controller::vectorQuaternionTransformation (double* q, double* v){
 
     return new_v;
 }
-
-
-//////////////////////suggested by ashneedh , hard to tune LQR
-// double* Controller::vectorQuaternionTransformation (double* q, double* v){
-//     double* new_v = new double[3];
-//     double* v_q  = new double[4];
-//     double* new_v_q = new double[4];
-//     double* q_dash = new double[4];
-//     double q_norm = sqrt(q[0] * q[0] + q[1] * q[1] + q[2] * q[2] + q[3] * q[3]);
-//     v_q[0] = 0;
-//     v_q[1] = v[0];
-//     v_q[2] = v[1];
-//     v_q[3] = v[2];
-//     q_dash[0] = q[0] / (q_norm * q_norm) ;
-//     q_dash[1] = -1.0 * q[1] / (q_norm * q_norm);
-//     q_dash[2] = -1.0 * q[2] / (q_norm * q_norm);
-//     q_dash[3] = -1.0 * q[3] / (q_norm * q_norm);
-
-// //     new_v_q = hamiltonianProduct(hamiltonianProduct(q, v_q), q_dash);
-//     new_v_q = hamiltonianProduct(hamiltonianProduct(q_dash, v_q), q);
-
-//     new_v[0] = new_v_q[1];
-//     new_v[1] = new_v_q[2];
-//     new_v[2] = new_v_q[3];
-
-//     delete[] v_q;
-//     delete[] new_v_q;
-//     delete[] q_dash;
-
-//     return new_v;
-// }
 
 double* Controller::vectorFRD2Plus (double* v){
     double* new_v = new double[3];
@@ -882,8 +961,6 @@ double Controller::calculateNorm(Vector vec) {
     double sum = 0.0;
     for (double component : vec) {
         sum += component * component;
-        // printf("********************** n vector component %f\n", component);
     }
-    // printf("********************** n vector mod**2 %f, root= %f\n\n", sum, std::sqrt(sum));
-    return abs(std::sqrt(sum));
+    return std::sqrt(sum);
 }

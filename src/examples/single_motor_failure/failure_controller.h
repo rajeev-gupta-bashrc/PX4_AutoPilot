@@ -55,6 +55,7 @@ public:
 
     static px4::AppState appState; /* track requests to terminate app */
 
+
     double* quaternionToRPY (double qw, double qx, double qy, double qz);
     double* vectorQuaternionTransformation (double* q, double* v);
     double* hamiltonianProduct (double* q1, double* q2);
@@ -75,18 +76,6 @@ public:
     drone_state_s state_data = {};  // Zero-initialized
     orb_advert_t drone_state_publisher = orb_advertise(ORB_ID(drone_state), &state_data);
 
-    double nz_bar = 0.9819333920816344;
-    double ny_bar = 0.1892268837006408;
-    double f2_bar = 6.898615227327325;
-    double fmax = 14.1328;
-
-    // double nz_bar = 0.9906986385217392;
-    // double ny_bar = 0.13607427248078469;
-    // double f2_bar = 7.126586433828183;
-    // double fmax = 13.14;
-    double nx_bar = 0.0;
-    double mass = 1.535;
-    double f_sigma = 10.0;            //initialisation
 
 private:
 

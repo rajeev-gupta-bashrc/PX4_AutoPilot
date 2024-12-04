@@ -39,6 +39,10 @@
 #include <px4_platform_common/app.h>
 #include <uORB/topics/actuator_motors.h>
 
+#include <uORB/topics/vehicle_command_ack.h>
+#include <uORB/topics/vehicle_command.h>
+#include <uORB/topics/vehicle_status.h>
+
 class Injector
 {
 public:

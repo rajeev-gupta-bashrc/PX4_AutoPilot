@@ -5,9 +5,12 @@ uint64 timestamp_sample	    # the timestamp the data this control response is ba
 
 float32 u1
 float32 u2
+float32 u3
 float32 f1
 float32 f2
 float32 f3
+float32 fsum
+float32 alt_error
 float32 p_s
 float32 q_s
 float32 r_s
@@ -20,6 +23,9 @@ float32 yaw_rad
 float32 x
 float32 y
 float32 z
+float32 nx_aor
+float32 ny_aor
+float32 nz_aor
 
 
 

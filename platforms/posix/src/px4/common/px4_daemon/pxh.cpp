@@ -60,6 +60,9 @@ Pxh *Pxh::_instance = nullptr;
 
 Pxh::Pxh()
 {
+	_history.try_to_add("smf start 1"); // for convenience
+	_history.try_to_add("smf sub"); // for convenience
+	_history.try_to_add("smf detect"); // for convenience
 	_history.try_to_add("commander takeoff"); // for convenience
 	_history.reset_to_end();
 }
