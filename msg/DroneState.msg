@@ -9,23 +9,28 @@ float32 u3
 float32 f1
 float32 f2
 float32 f3
+float32 f4
 float32 fsum
 float32 alt_error
+float32 q_r
+float32 q_i
+float32 q_j
+float32 q_k
 float32 p_s
 float32 q_s
 float32 r_s
 float32 n_x
 float32 n_y
 float32 n_z
+float32 nx_aor
+float32 ny_aor
+float32 nz_aor
 float32 roll_rad
 float32 pitch_rad
 float32 yaw_rad
 float32 x
 float32 y
 float32 z
-float32 nx_aor
-float32 ny_aor
-float32 nz_aor
 
 
 

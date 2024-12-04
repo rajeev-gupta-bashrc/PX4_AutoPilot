@@ -50,42 +50,8 @@
 
 #include <uORB/uORB.h>
 #include <uORB/topics/vehicle_odometry.h>
-// #include <uORB/topics/vehicle_command.h>
-// #include <uORB/topics/vehicle_status.h>
 
 px4::AppState Detector::appState;
-
-
-// int send_vehicle_command(const uint32_t cmd, const float param1 = NAN, const float param2 = NAN,
-// 				 const float param3 = NAN,  const float param4 = NAN, const double param5 = static_cast<double>(NAN),
-// 				 const double param6 = static_cast<double>(NAN), const float param7 = NAN, uint64_t timestamp=0)
-// {
-// 	vehicle_command_s vcmd{};
-// 	vcmd.command = cmd;
-// 	vcmd.param1 = param1;
-// 	vcmd.param2 = param2;
-// 	vcmd.param3 = param3;
-// 	vcmd.param4 = param4;
-// 	vcmd.param5 = param5;
-// 	vcmd.param6 = param6;
-// 	vcmd.param7 = param7;
-
-// 	// uORB::SubscriptionData<vehicle_status_s> vehicle_status_sub{ORB_ID(vehicle_status)};
-//     int vehicle_status_sub = orb_subscribe(ORB_ID(vehicle_status));
-//     vehicle_status_s vehicle_status_data;
-//     orb_copy(ORB_ID(vehicle_status), vehicle_status_sub, &vehicle_status_data);
-
-// 	vcmd.source_system = vehicle_status_data.system_id;
-// 	vcmd.target_system = vehicle_status_data.system_id;
-// 	vcmd.source_component = vehicle_status_data.component_id;
-// 	vcmd.target_component = vehicle_status_data.component_id;
-
-// 	// uORB::Publication<vehicle_command_s> vcmd_pub{ORB_ID(vehicle_command)};
-//     orb_advert_t vehicle_command_publisher = orb_advertise(ORB_ID(vehicle_command), &vcmd);
-// 	vcmd.timestamp = timestamp;
-// 	// return vcmd_pub.publish(vcmd);
-//     return orb_publish(ORB_ID(vehicle_command), vehicle_command_publisher, &vcmd);
-// }
 
 int Detector::main(){
 
@@ -110,10 +76,6 @@ int Detector::main(){
            }
 
          else{
-            // switch to manual mode
-            // uint16_t PX4_CUSTOM_MAIN_MODE_MANUAL = 1;
-            // send_vehicle_command(vehicle_command_s::VEHICLE_CMD_DO_SET_MODE, 1, PX4_CUSTOM_MAIN_MODE_MANUAL, timestamp=odometry.timestamp);
-            // send_vehicle_command(vehicle_command_s::VEHICLE_CMD_NAV_LAND);
             return (detected_motor_failure+1);
          }
 

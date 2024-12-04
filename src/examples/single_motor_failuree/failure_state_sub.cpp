@@ -70,7 +70,7 @@ int StateSub::main(){
     int drone_state_sub = orb_subscribe(ORB_ID(drone_state));
     drone_state_s drone_state_data;
 
-    std::string baseFilePath = "/home/rajeev-gupta/ros2/inter-iit_ws/src/Inter-IIT_IdeaForge-PS/detection_tests/px4_detection_csv/5states";
+    std::string baseFilePath = "/home/rajeev-gupta/ros2/inter-iit_ws/src/Inter-IIT_IdeaForge-PS/detection_tests/px4_detection_csv/5states/odometry_data";
     int counter = 0;
     std::string filePath = baseFilePath + "_" + std::to_string(counter);
 
@@ -105,6 +105,10 @@ int StateSub::main(){
                  << drone_state_data.f3 << ","
                  << drone_state_data.fsum << ","
                  << drone_state_data.alt_error << ","
+                 << drone_state_data.q_r << ","
+                 << drone_state_data.q_i << ","
+                 << drone_state_data.q_j << ","
+                 << drone_state_data.q_k << ","
                  << drone_state_data.p_s << ","
                  << drone_state_data.q_s << ","
                  << drone_state_data.r_s << ","

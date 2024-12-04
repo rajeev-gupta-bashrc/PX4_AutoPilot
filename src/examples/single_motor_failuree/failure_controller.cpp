@@ -101,7 +101,7 @@ void Controller::outerLoop() {
     int vehicle_odometry_fd = orb_subscribe(ORB_ID(vehicle_odometry));
     vehicle_odometry_s odometry;
 
-    Vector desired_position = {0.0 , 0.0 , -12};
+    Vector desired_position = {0.0 , 0.0 , -11.0};
     Vector current_position = {0.0 , 0.0 , 0.0};
     Vector pos_deviation = {0.0 , 0.0 , 0.0};
 
@@ -110,7 +110,7 @@ void Controller::outerLoop() {
     double nx_des = 0.0;
     double ny_des = 0.0;
     double nz_des = 1.0;
-    double fsum = 11.0;
+    double fsum = 19.0;
     double alt_error;////
 
     // double kp = 1;
@@ -120,7 +120,9 @@ void Controller::outerLoop() {
     // Vector nat_freq = {0.0, 0.0, 1.0};
     // Vector damping_const = {0.0, 0.0, 0.0};
 
-    Vector Kp = {0.0, 0.0, 4};
+    Vector Kp = {0.0, 0.0, 3.8};
+    // Vector Kp = {0, 0, 4};
+    // Vector Kp = {0.05, 0.05, 5};
     Vector Kd = {0.0, 0.0, 0.0};
 
     // double* rpy_rad;
@@ -135,6 +137,7 @@ void Controller::outerLoop() {
     Vector current_velocity_plus = {0.0 , 0.0 , 0.0};
     Vector current_position_plus = {0.0 , 0.0 , 0.0};
 
+    double prev_desired_position_z = -11.0;
 
     while (true) {
 
@@ -153,7 +156,10 @@ void Controller::outerLoop() {
         current_position[1] = (double)odometry.position[1];
         current_position[2] = (double)odometry.position[2];
 
-        desired_position[2] = current_position[2] - 1;
+        desired_position[2] = current_position[2] - 1.0;
+        desired_position[2] = (desired_position[2] < prev_desired_position_z) ? desired_position[2] : desired_position[2];
+        // desired_position[2] = (desired_position[2] < prev_desired_position_z) ? desired_position[2] : prev_desired_position_z;
+        prev_desired_position_z = desired_position[2];
 
         current_position_plus = vectorFRD2Plus(current_position);
         desired_position_plus = vectorFRD2Plus(desired_position);
@@ -268,6 +274,9 @@ void Controller::innerLoop() {
     int vehicle_odometry_fd = orb_subscribe(ORB_ID(vehicle_odometry));
     vehicle_odometry_s odometry;
 
+    int vehicle_attitude_fd = orb_subscribe(ORB_ID(vehicle_attitude));
+    vehicle_attitude_s attitude;
+
     double* rpy_rad;
 
     double roll_rad;
@@ -311,9 +320,12 @@ void Controller::innerLoop() {
         usleep(100);
 
         orb_copy(ORB_ID(vehicle_odometry), vehicle_odometry_fd, &odometry);
+        orb_copy(ORB_ID(vehicle_attitude), vehicle_attitude_fd, &attitude);
+
 
 
         rpy_rad = quaternionToRPY(odometry.q[0], odometry.q[1], odometry.q[2], odometry.q[3]);
+        // rpy_rad = quaternionToRPY(attitude.q[0], attitude.q[1], attitude.q[2], attitude.q[3]);
 
         roll_rad = rpy_rad[0];
         pitch_rad = rpy_rad[1];
@@ -329,10 +341,14 @@ void Controller::innerLoop() {
         r_s = rpy_plus_rate[2];
 
         double* q_inverse = new double[4];
-        q_inverse[0] = odometry.q[0];
-        q_inverse[1] = -1.0 * (double)odometry.q[1];
-        q_inverse[2] = -1.0 * (double)odometry.q[2];
-        q_inverse[3] = -1.0 * (double)odometry.q[3];
+        q_inverse[0] = attitude.q[0];
+        q_inverse[1] = -1.0 * (double)attitude.q[1];
+        q_inverse[2] = -1.0 * (double)attitude.q[2];
+        q_inverse[3] = -1.0 * (double)attitude.q[3];
+        // q_inverse[0] = odometry.q[0];
+        // q_inverse[1] = -1.0 * (double)odometry.q[1];
+        // q_inverse[2] = -1.0 * (double)odometry.q[2];
+        // q_inverse[3] = -1.0 * (double)odometry.q[3];
 
         {
             std::lock_guard<std::mutex> lock(shared_state_mutex);
@@ -461,11 +477,20 @@ void Controller::innerLoop() {
         state_data.f1 = f1;
         state_data.f2 = f2;
         state_data.f3 = f3;
+        state_data.f4 = 0;
         state_data.fsum = shared_state.fsum;
         state_data.alt_error = shared_state.alt_error;
+        state_data.q_r = (double)attitude.q[0];
+        state_data.q_i = (double)attitude.q[1];
+        state_data.q_j = (double)attitude.q[2];
+        state_data.q_k = (double)attitude.q[3];
+        // state_data.q_r = (double)odometry.q[0];
+        // state_data.q_i = (double)odometry.q[1];
+        // state_data.q_j = (double)odometry.q[2];
+        // state_data.q_k = (double)odometry.q[3];
         state_data.p_s = p_s;
         state_data.q_s = q_s;
-        state_data.r_s = yaw_rate;
+        state_data.r_s = r_s;
         state_data.n_x = n_x;
         state_data.n_y = n_y;
         state_data.n_z = n_z;
@@ -522,6 +547,7 @@ void Controller::innerLoop() {
         shared_state.nx_des = 0.0;
         shared_state.ny_des = 0.0;
         shared_state.nz_des = 1.0;
+        shared_state.fsum = 23;
         }
 
 

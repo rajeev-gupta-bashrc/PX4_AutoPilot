@@ -47,40 +47,6 @@
 #include <uORB/uORB.h>
 #include <uORB/topics/actuator_motors.h>
 
-#include <uORB/topics/vehicle_command.h>
-#include <uORB/topics/vehicle_status.h>
-
-int svc(const uint32_t cmd, const float param1 = NAN, const float param2 = NAN,
-				 const float param3 = NAN,  const float param4 = NAN, const double param5 = static_cast<double>(NAN),
-				 const double param6 = static_cast<double>(NAN), const float param7 = NAN)
-{
-	vehicle_command_s vcmd{};
-	vcmd.command = cmd;
-	vcmd.param1 = param1;
-	vcmd.param2 = param2;
-	vcmd.param3 = param3;
-	vcmd.param4 = param4;
-	vcmd.param5 = param5;
-	vcmd.param6 = param6;
-	vcmd.param7 = param7;
-
-	// uORB::SubscriptionData<vehicle_status_s> vehicle_status_sub{ORB_ID(vehicle_status)};
-    int vehicle_status_sub = orb_subscribe(ORB_ID(vehicle_status));
-    vehicle_status_s vehicle_status_data;
-    orb_copy(ORB_ID(vehicle_status), vehicle_status_sub, &vehicle_status_data);
-
-	vcmd.source_system = vehicle_status_data.system_id;
-	vcmd.target_system = vehicle_status_data.system_id;
-	vcmd.source_component = vehicle_status_data.component_id;
-	vcmd.target_component = vehicle_status_data.component_id;
-
-	// uORB::Publication<vehicle_command_s> vcmd_pub{ORB_ID(vehicle_command)};
-    orb_advert_t vehicle_command_publisher = orb_advertise(ORB_ID(vehicle_command), &vcmd);
-	vcmd.timestamp = 0;
-	// return vcmd_pub.publish(vcmd);
-    return orb_publish(ORB_ID(vehicle_command), vehicle_command_publisher, &vcmd);
-}
-
 px4::AppState Injector::appState;   /* track requests to terminate app */
 
 int Injector::main(int motor_index)
@@ -94,8 +60,7 @@ int Injector::main(int motor_index)
     printf("Injecting failure at instance %d...\n", motor_index);
 
     // In each iteration of loop, fail the desired motor by publishing NaN on it
-    svc(vehicle_command_s::VEHICLE_CMD_DO_SET_MODE, 1, 1);
-    px4_sleep(5);
+
     while (!appState.exitRequested() ) {
         px4_sleep(0.1);
         updateController(actuator_outputs_fd, controller);                 // Subscribing thrust values for other motors

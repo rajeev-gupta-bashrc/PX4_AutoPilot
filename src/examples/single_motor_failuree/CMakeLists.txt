@@ -32,7 +32,7 @@
 ############################################################################
 # motor_failure module with integrated Failure Injector
 px4_add_module(
-    MODULE examples__single_motor_failure
+    MODULE examples__single_motor_failuree
     MAIN smf          # Entry point
     SRCS
         failure_main.cpp            # Entry point handler for commands
