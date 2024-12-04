@@ -112,6 +112,7 @@ void Controller::outerLoop() {
     // Vector nat_freq = {1.5, 1.5, 3};
     Vector nat_freq = {1.5, 1.5, 3};
     Vector damping_const = {0.7, 0.7, 0.7};
+    // Vector damping_const = {0.09258186790207677, 0.09258186790207677, 0.09258186790207677};
 
     // double* rpy_rad;
 
