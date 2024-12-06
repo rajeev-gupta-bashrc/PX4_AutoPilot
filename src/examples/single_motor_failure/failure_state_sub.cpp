@@ -70,12 +70,13 @@ int StateSub::main(){
 
     std::string baseFilePath = "/home/rajeev-gupta/ros2/inter-iit_ws/src/Inter-IIT_IdeaForge-PS/detection_tests/px4_detection_csv/odometry_data";
     std::string filePath = baseFilePath;
-    int counter = 1;
+    int counter = 0;
 
     // Check if the file exists and modify the filename if necessary
+    filePath = baseFilePath + "_" + std::to_string(counter);
     while (std::filesystem::exists(filePath + ".csv")) {
-        filePath = baseFilePath + "_" + std::to_string(counter);
         counter++;
+        filePath = baseFilePath + "_" + std::to_string(counter);
     }
     filePath = filePath + ".csv";
 
@@ -96,6 +97,7 @@ int StateSub::main(){
         if(drone_state_data.timestamp == prev_timestamp || drone_state_data.timestamp > 99999999){
             continue;
         }
+        // printf("%f\n", drone_state_data.timestamp);
         csvFile  << drone_state_data.timestamp << ","
                  << drone_state_data.u1 << ","
                  << drone_state_data.u2 << ","

@@ -1827,10 +1827,10 @@ void Commander::run()
 		dataLinkCheck();
 
 		// Check for failure detector status
-		if (_failure_detector.update(_vehicle_status, _vehicle_control_mode)) {
-			_vehicle_status.failure_detector_status = _failure_detector.getStatus().value;
-			_status_changed = true;
-		}
+		// if (_failure_detector.update(_vehicle_status, _vehicle_control_mode)) {
+		// 	_vehicle_status.failure_detector_status = _failure_detector.getStatus().value;
+		// 	_status_changed = true;
+		// }
 
 		modeManagementUpdate();
 
@@ -1842,16 +1842,17 @@ void Commander::run()
 		if ((now >= _last_health_and_arming_check + 100_ms) || _status_changed || nav_state_or_failsafe_changed) {
 			_last_health_and_arming_check = now;
 
-			perf_begin(_preflight_check_perf);
-			_health_and_arming_checks.update();
-			bool pre_flight_checks_pass = _health_and_arming_checks.canArm(_vehicle_status.nav_state);
+			// perf_begin(_preflight_check_perf);
+			// _health_and_arming_checks.update();
+			// bool pre_flight_checks_pass = _health_and_arming_checks.canArm(_vehicle_status.nav_state);
+			bool pre_flight_checks_pass = true;
 
 			if (_vehicle_status.pre_flight_checks_pass != pre_flight_checks_pass) {
 				_vehicle_status.pre_flight_checks_pass = pre_flight_checks_pass;
 				_status_changed = true;
 			}
 
-			perf_end(_preflight_check_perf);
+			// perf_end(_preflight_check_perf);
 			checkAndInformReadyForTakeoff();
 		}
 

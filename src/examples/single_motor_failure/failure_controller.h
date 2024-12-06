@@ -79,6 +79,7 @@ public:
     double ny_bar = 0.1892268837006408;
     double f2_bar = 6.898615227327325;
     double fmax = 14.1328;
+    // double alpha = 1;
 
     // double nz_bar = 0.9906986385217392;
     // double ny_bar = 0.13607427248078469;

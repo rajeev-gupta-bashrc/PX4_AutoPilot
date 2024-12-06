@@ -97,7 +97,7 @@ void Controller::outerLoop() {
     int vehicle_odometry_fd = orb_subscribe(ORB_ID(vehicle_odometry));
     vehicle_odometry_s odometry;
 
-    Vector desired_position = {0.0 , 0.0 , -10};
+    Vector desired_position = {0.0 , 0.0 , -11};
     Vector current_position = {0.0 , 0.0 , 0.0};
     Vector pos_deviation = {0.0 , 0.0 , 0.0};
 
@@ -170,9 +170,15 @@ void Controller::outerLoop() {
 
         {
         std::lock_guard<std::mutex> lock(shared_state_mutex); // Lock mutex for shared state
+        // shared_state.nx_des = 0;
+        // shared_state.ny_des = 0;
+        // shared_state.nz_des = 1;
         shared_state.nx_des = ndes_g[0];
         shared_state.ny_des = ndes_g[1];
         shared_state.nz_des = ndes_g[2];
+        // shared_state.nx_des = alpha*ndes_g[0] + (1-alpha)*nx_bar;
+        // shared_state.ny_des = alpha*ndes_g[1] + (1-alpha)*ny_bar;
+        // shared_state.nz_des = alpha*ndes_g[2] + (1-alpha)*nz_bar;
         shared_state.fsum = fsum;
 
         shared_state.alt_error = alt_error;
@@ -278,9 +284,9 @@ void Controller::innerLoop() {
         n_y = normal_body_frame[1];
         n_z = normal_body_frame[2];
 
+        // current_state = {p_s, q_s, nx_bar, ny_bar};        // Get current state
+        // inputs = lqr.getControlInputs(current_state, detected_motor, n_x, n_y);     // Apply LQR controller
         current_state = {p_s, q_s, n_x, n_y};        // Get current state
-
-
         inputs = lqr.getControlInputs(current_state, detected_motor, nx_bar, ny_bar);     // Apply LQR controller
 
         u1 = inputs[0];
@@ -357,6 +363,37 @@ void Controller::innerLoop() {
         }
 
 
+
+        // printf("-----------------\n");
+        // printf("u1 = %f, u2 = %f, f1 = %f , f2 = %f , f3 = %f , f_sigma = %f \n",u1, u2,f1, f2, f3, shared_state.fsum);
+        // // printf("u1 = %f, u2 = %f, u3 = %f, f1 = %f , f2 = %f , f3 = %f , f_sigma = %f \n",u1, u2,f1, f2, f3, f_sigma);
+        // printf("state p = %f, q = %f, r = %f, n_x = %f, n_y = %f, n_z = %f \n", p_s, q_s, r_s, n_x, n_y, n_z);
+        // printf("roll = %f pitch = %f yaw = %f timestamp = %d\n", rpy_rad[0], rpy_rad[1], rpy_rad[2], odometry.timestamp);
+        // printf("x = %f, y = %f, z = %f \n", (double)odometry.position[0],(double)odometry.position[1],(double)odometry.position[2]);
+        // // printf("nx_des = %f, ny_des = %f, ny_des = %f", shared_state.nx_des, shared_state.ny_des, shared_state.nz_des);
+        // printf("\n\n");
+
+        }
+
+        else if(abs(yaw_rate) < 5 && odometry.position[2] < -2.5f)
+        {
+        act.control[detected_motor_index] = (float)nan("1");
+        act.control[opposite_motor_index] = (float)nan("1");
+        act.control[diagonally_working_1] = 0.67;
+        act.control[diagonally_working_2] = 0.67;
+        // printf("Two motors only , yaw_rate = %f\n",yaw_rate);
+        // printf("state p = %f, q = %f, r = %f, n_x = %f, n_y = %f, n_z = %f \n", p_s, q_s, yaw_rate, n_x, n_y, n_z);
+        // printf("roll = %f pitch = %f yaw = %f timestamp = %d\n", rpy_rad[0], rpy_rad[1], rpy_rad[2], odometry.timestamp);
+        }
+
+        else if(odometry.position[2] > -2.5f)
+        {
+        act.control[0] = 0;
+        act.control[1] = 0;
+        act.control[2] = 0;
+        act.control[3] = 0;
+        }
+
         state_data.timestamp = odometry.timestamp;
         state_data.u1 = u1;
         state_data.u2 = u2;
@@ -375,37 +412,6 @@ void Controller::innerLoop() {
         state_data.x = (double)odometry.position[0];
         state_data.y = (double)odometry.position[1];
         state_data.z = (double)odometry.position[2];
-
-        printf("-----------------\n");
-        printf("u1 = %f, u2 = %f, f1 = %f , f2 = %f , f3 = %f , f_sigma = %f \n",u1, u2,f1, f2, f3, shared_state.fsum);
-        // printf("u1 = %f, u2 = %f, u3 = %f, f1 = %f , f2 = %f , f3 = %f , f_sigma = %f \n",u1, u2,f1, f2, f3, f_sigma);
-        printf("state p = %f, q = %f, r = %f, n_x = %f, n_y = %f, n_z = %f \n", p_s, q_s, r_s, n_x, n_y, n_z);
-        printf("roll = %f pitch = %f yaw = %f timestamp = %d\n", rpy_rad[0], rpy_rad[1], rpy_rad[2], odometry.timestamp);
-        printf("x = %f, y = %f, z = %f \n", (double)odometry.position[0],(double)odometry.position[1],(double)odometry.position[2]);
-        // printf("nx_des = %f, ny_des = %f, ny_des = %f", shared_state.nx_des, shared_state.ny_des, shared_state.nz_des);
-        printf("\n\n");
-
-        }
-
-        else if(abs(yaw_rate) < 5 && odometry.position[2] < -2.5f)
-        {
-        act.control[detected_motor_index] = (float)nan("1");
-        act.control[opposite_motor_index] = (float)nan("1");
-        act.control[diagonally_working_1] = 0.67;
-        act.control[diagonally_working_2] = 0.67;
-        printf("Two motors only , yaw_rate = %f\n",yaw_rate);
-        printf("state p = %f, q = %f, r = %f, n_x = %f, n_y = %f, n_z = %f \n", p_s, q_s, yaw_rate, n_x, n_y, n_z);
-        printf("roll = %f pitch = %f yaw = %f timestamp = %d\n", rpy_rad[0], rpy_rad[1], rpy_rad[2], odometry.timestamp);
-        }
-
-        else if(odometry.position[2] > -2.5f)
-        {
-        act.control[0] = 0;
-        act.control[1] = 0;
-        act.control[2] = 0;
-        act.control[3] = 0;
-        }
-
         orb_publish(ORB_ID(actuator_motors), act_pub_fd, &act);
         orb_publish(ORB_ID(drone_state), drone_state_publisher, &state_data);
 
