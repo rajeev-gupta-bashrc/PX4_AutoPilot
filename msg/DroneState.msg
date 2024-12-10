@@ -11,6 +11,12 @@ float32 f3
 float32 p_s
 float32 q_s
 float32 r_s
+float32 nx_des_frd_gnd
+float32 ny_des_frd_gnd
+float32 nz_des_frd_gnd
+float32 nx_des_frd_body
+float32 ny_des_frd_body
+float32 nz_des_frd_body
 float32 n_x
 float32 n_y
 float32 n_z

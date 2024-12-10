@@ -205,7 +205,7 @@ int Detector::main(){
     while (!appState.exitRequested()) {
         px4_sleep(0.001);
         odometryUpdate(vehicle_odometry_fd, odometry);
-        print_primary_axis(vehicle_odometry_fd, odometry);
+        // print_primary_axis(vehicle_odometry_fd, odometry);
          if (detected_motor_failure == -1) {
             detectFailure();
            }
