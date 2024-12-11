@@ -127,7 +127,8 @@ int daemon_detector(int argc, char **argv)
 
 	// Call the main function of Detector class to start detecting failure
 
-	int detected_motor = detection.main();
+	// int detected_motor = detection.main();
+	int detected_motor = 1;
 
         orb_copy(ORB_ID(vehicle_odometry), vehicle_odometry_fd, &odometry);    // Updating odometry value for timestamp
 

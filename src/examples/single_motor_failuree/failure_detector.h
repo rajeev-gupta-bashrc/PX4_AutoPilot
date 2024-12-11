@@ -41,10 +41,6 @@
 #include <array>
 #include <px4_platform_common/app.h>
 #include <uORB/topics/vehicle_odometry.h>
-#include <uORB/topics/drone_state.h>
-
-using Vector = std::vector<double>;
-
 
 class Detector
 {
@@ -92,23 +88,9 @@ public:
     void detectFailure();
     void odometryUpdate(int vehicle_odometry_fd, vehicle_odometry_s &vehicle_odometry);
 
-    void vectorFRD2Plus (Vector &v);
-    double calculateNorm(Vector vec) ;
-    Vector hamiltonianProduct (Vector &q1, Vector &q2);
-    void print_primary_axis(const int vehicle_odometry_fd, vehicle_odometry_s odometry);
-    Vector vectorQuaternionTransformation (Vector &q, Vector &v);
-    void AorBodyFrame (Vector &q, Vector &N);
 
-    double d_nx_bar = 0.0;
-    double d_ny_bar = 0.1892268837006408;
-    double d_nz_bar = 0.9819333920816344;
-    double d_alpha = 1;
-    double d_mass = 1.535;
-    double d_f_sigma = 10.0;            //initialisation
-    drone_state_s d_state_data = {};  // Zero-initialized
-    orb_advert_t d_drone_state_publisher = orb_advertise(ORB_ID(drone_state), &d_state_data);
+
 
 private:
 
 };
-

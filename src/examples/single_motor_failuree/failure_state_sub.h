@@ -29,70 +29,24 @@
  ****************************************************************************/
 
 /**
- * @file lqr.h
- * Header file for LQR class
+ * @file failure_state_pub.h
  *
  */
 #pragma once
 
-#include <iostream>
+#include <px4_platform_common/app.h>
 #include <vector>
-#include <cmath>
+#include <uORB/topics/drone_state.h>
 
-using Matrix = std::vector<std::vector<double>>;
-using Vector = std::vector<double>;
-
-class LQR
+class StateSub
 {
 public:
-    LQR() {}
-    ~LQR() {}
+    StateSub() {}
+    ~StateSub() {}
 
-    Vector getControlInputs(Vector actual_state, int detected_motor, double nx_des, double ny_des);
-
-
-    Matrix multiply(const Matrix &a, const Matrix &b);
-    Vector multiply(const Matrix &a, const Vector &b);
-    Matrix transpose(const Matrix &a);
-    Matrix inverse2x2(const Matrix &a);
-    Matrix identityMatrix(int size);
-    Vector clampVector(const Vector &vec, double minVal, double maxVal);
-    double norm(const Vector &vec);
-    Vector vectorAdd(const Vector &a, const Vector &b);
-    Matrix matrixAdd(const Matrix &a, const Matrix &b);
-    Matrix matrixSubtract(const Matrix &a, const Matrix &b);
-    Vector lqr(const Vector &actual_state, const Vector &desired_state, const Matrix &Q, const Matrix &R, const Matrix &A, const Matrix &B, double dt);
-    Vector state_space_model(const Matrix &A, const Vector &state, const Matrix &B, Vector control_input);
-    Matrix getB(double deltat);
-    Matrix getA(double deltat);
-
-
-    //Vehicle Constants
-    double I_xxt = 0.02166666666666667;
-    double I_yyt = 0.02166666666666667;
-    double I_zzt = 0.04000000000000001;
-    double I_zzp = 1.1928e-4;
-    double l = 0.25;
-
-
-
-
-    // Equilibrium state variables
-    double nx_eq;
-    double ny_eq;
-    double nz_eq = 0.9583;
-    double p_eq;
-    double q_eq;
-    double r_eq = -8.5;
-    double w1_eq = 738.0 ;
-    double w2_eq = 522.0 ;
-    double w3_eq =  738.0;
-    double w4_eq = 0.0;
-
-   // A matrix variable
-    double a_const = ((I_xxt - I_zzt)*r_eq/I_xxt) + I_zzp*( w1_eq + w2_eq + w3_eq + w4_eq ) / I_xxt ;
-
-
+    int main();
+    long unsigned int prev_timestamp = 0;
+    static px4::AppState appState; /* track requests to terminate app */
 
 private:
 

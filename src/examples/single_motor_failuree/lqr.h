@@ -29,54 +29,73 @@
  ****************************************************************************/
 
 /**
- * @file failure_controller.h
- *  Header of Controller class
+ * @file lqr.h
+ * Header file for LQR class
  *
  */
 #pragma once
 
-#include <px4_platform_common/app.h>
-#include <uORB/topics/actuator_motors.h>
-#include <uORB/topics/vehicle_odometry.h>
-#include <uORB/topics/vehicle_global_position.h>
-#include <uORB/topics/drone_state.h>
+#include <iostream>
 #include <vector>
+#include <cmath>
 
 using Matrix = std::vector<std::vector<double>>;
 using Vector = std::vector<double>;
 
-class Controller
+class LQR
 {
 public:
-    Controller() {}
-    ~Controller() {}
+    LQR() {}
+    ~LQR() {}
 
-    int main(int detected_motor);
-
-    static px4::AppState appState; /* track requests to terminate app */
-
-    // KP gain for altitiude
-    double KP;
-    // f_sigma, weight of drone
-    double f_sigma, drone_weight;
+    Vector getControlInputs(Vector actual_state, int detected_motor, double nx_des, double ny_des);
 
 
-    double* quaternionToRPY (double qw, double qx, double qy, double qz);
-    double* vectorQuaternionTransformation (double* q, double* v);
-    double* hamiltonianProduct (double* q1, double* q2);
-    double* vectorFRD2Plus (double* v);
-    double* vectorAlongNormal (double* q);
-    double* rpy_rate_plus(double roll_rate, double pitch_rate, double yaw_rate);
-
-    void innerLoop();
-    void outerLoop();
-    Matrix calculateRotationMatrixInverse(double roll, double pitch, double yaw);
-    Vector vectorAdd(const Vector &a, const Vector &b);
+    Matrix multiply(const Matrix &a, const Matrix &b);
     Vector multiply(const Matrix &a, const Vector &b);
+    Matrix transpose(const Matrix &a);
+    Matrix inverse2x2(const Matrix &a);
+    Matrix identityMatrix(int size);
+    Vector clampVector(const Vector &vec, double minVal, double maxVal);
+    double norm(const Vector &vec);
+    Vector vectorAdd(const Vector &a, const Vector &b);
+    Matrix matrixAdd(const Matrix &a, const Matrix &b);
+    Matrix matrixSubtract(const Matrix &a, const Matrix &b);
+    Vector lqr(const Vector &actual_state, const Vector &desired_state, const Matrix &Q, const Matrix &R, const Matrix &A, const Matrix &B, double dt);
+    Vector state_space_model(const Matrix &A, const Vector &state, const Matrix &B, Vector control_input);
+    Matrix getB(double deltat);
+    Matrix getA(double deltat);
 
-    drone_state_s state_data = {};  // Zero-initialized
-    orb_advert_t drone_state_publisher = orb_advertise(ORB_ID(drone_state), &state_data);
 
+    //Physical Parameters
+    double l = 0.25;
+    double I_xxt = 0.02166666666666667;
+    double I_yyt = 0.02166666666666667;
+    double I_zzt = 0.04000000000000001;
+    double I_zzp = 1.1928e-4;
+
+    //Aerodynamic Parameters
+    double k_tau = 0.016;
+    double gamma = 4.16e-4;
+
+    //Equilibrium Values
+    double p_eq;
+    double q_eq;
+    double r_eq;
+    double w1_eq = 738.0;
+    double w2_eq = 522.0;
+    double w3_eq = 738.0;
+    double w4_eq = 0.0;
+    double nx_eq;
+    double ny_eq;
+    double nz_eq;
+    double z_eq = -10.0;
+
+    //A matrix variables
+    double a_const;
+    double b_const;
+    double c_const;
+    double d_const;
 
 
 

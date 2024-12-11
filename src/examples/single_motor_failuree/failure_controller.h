@@ -29,25 +29,52 @@
  ****************************************************************************/
 
 /**
- * @file failure_state_pub.h
+ * @file failure_controller.h
+ *  Header of Controller class
  *
  */
 #pragma once
 
 #include <px4_platform_common/app.h>
-#include <vector>
+#include <uORB/topics/actuator_motors.h>
+#include <uORB/topics/vehicle_odometry.h>
+#include <uORB/topics/vehicle_global_position.h>
 #include <uORB/topics/drone_state.h>
+#include <vector>
 
-class StateSub
+using Matrix = std::vector<std::vector<double>>;
+using Vector = std::vector<double>;
+
+class Controller
 {
 public:
-    StateSub() {}
-    ~StateSub() {}
+    Controller() {}
+    ~Controller() {}
 
-    int main();
+    int main(int detected_motor);
 
     static px4::AppState appState; /* track requests to terminate app */
-    long unsigned int prev_timestamp = 0;
+
+
+    double* quaternionToRPY (double qw, double qx, double qy, double qz);
+    double* vectorQuaternionTransformation (double* q, double* v);
+    double* hamiltonianProduct (double* q1, double* q2);
+    double* vectorFRD2Plus (double* v);
+    Vector vectorFRD2Plus (Vector v);
+    double* AorBodyFrame (double* q, double* N);
+    // double* vectorAlongNormal (double* q);
+    double* rpy_rate_plus(double roll_rate, double pitch_rate, double yaw_rate);
+    double alt_controller(double alt_error, double kp);
+    double calculateNorm(Vector vec);
+
+    void innerLoop();
+    void outerLoop();
+    Matrix calculateRotationMatrixInverse(double roll, double pitch, double yaw);
+    Vector vectorAdd(const Vector &a, const Vector &b);
+    Vector multiply(const Matrix &a, const Vector &b);
+
+    drone_state_s state_data = {};  // Zero-initialized
+    orb_advert_t drone_state_publisher = orb_advertise(ORB_ID(drone_state), &state_data);
 
 
 private:
