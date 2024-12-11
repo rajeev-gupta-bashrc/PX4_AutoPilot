@@ -88,6 +88,7 @@ public:
     double nx_bar = 0.0;
     double mass = 1.535;
     double f_sigma = 10.0;            //initialisation
+    bool init_landing = false;
 
 private:
 

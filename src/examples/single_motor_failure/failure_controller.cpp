@@ -78,7 +78,7 @@ struct State {
     int check_flag = 0;
     int detected_motor;
 
-    double alt_error;////
+    double alt_error;
 
     double nx_des = 0.0;
     double ny_des = 0.0;
@@ -97,7 +97,7 @@ void Controller::outerLoop() {
     int vehicle_odometry_fd = orb_subscribe(ORB_ID(vehicle_odometry));
     vehicle_odometry_s odometry;
 
-    Vector desired_position = {0.0 , 0.0 , -11};
+    Vector desired_position = {0.0 , 0.0 , -10};
     Vector current_position = {0.0 , 0.0 , 0.0};
     Vector pos_deviation = {0.0 , 0.0 , 0.0};
 
@@ -110,7 +110,7 @@ void Controller::outerLoop() {
     // Vector damping_const = {0.7, 0.7, 0.7};
     // Vector nat_freq = {1.5, 1.5, 2.5};           //good
     // Vector nat_freq = {1.5, 1.5, 3};
-    Vector nat_freq = {1.5, 1.5, 3};
+    Vector nat_freq = {1.5, 1.5, 3.5};
     Vector damping_const = {0.7, 0.7, 0.7};
     // Vector damping_const = {0.09258186790207677, 0.09258186790207677, 0.09258186790207677};
 
@@ -143,7 +143,9 @@ void Controller::outerLoop() {
 
         pos_deviation[0] = current_position_plus[0] - desired_position_plus[0];
         pos_deviation[1] = current_position_plus[1] - desired_position_plus[1];
-        pos_deviation[2] = current_position_plus[2] - desired_position_plus[2];
+        // pos_deviation[1] = 1;
+        // pos_deviation[2] = current_position_plus[2] - desired_position_plus[2];
+        pos_deviation[2] = 1;
 
         // desired_accel_plus[0] = -2*damping_const*nat_freq*(double)odometry.velocity[0] - nat_freq*nat_freq*pos_deviation[0];
         // desired_accel_plus[1] = -2*damping_const*nat_freq*(double)odometry.velocity[1] - nat_freq*nat_freq*pos_deviation[1];
@@ -238,6 +240,9 @@ void Controller::innerLoop() {
     double f2;                  //      Opposite to failed modtor
     double f3;                  //      Clockwise first motor to the failed
 
+    double f_sigma_landing = 0.0;
+    bool init_landing_here = false;
+
     LQR lqr;
 
     Vector current_state;
@@ -293,16 +298,40 @@ void Controller::innerLoop() {
         u2 = inputs[1];
         // u3 = inputs[2];
 
+        if(abs(yaw_rate) > 15 || init_landing_here){
+        // if(abs(yaw_rate) > 15 || init_landing_here){
+            init_landing_here = true;
+            // f_sigma_landing = 13;
+            // f_sigma_landing = 11;
+            f_sigma = 11;
+        }
+
 
         // Thrust equations after solving input relation
         ///////////////////////////////////////////////////////////
-        // f2 = u2 + 8.83/2;
-        // f1 = ( 8.83 - (u1 + u2)/2 > 0) ? 8.83 - (u1 + u2)/2 : 0.0 ;
-        // f3 = (8.83 + (u1 - u2)/2 > 14.56 ) ? 14.56 : 8.83 + (u1 - u2)/2  ;
+        // f2 = u2 + shared_state.fsum * (1.28 / (1.28 + (2)));
+        // f1 = shared_state.fsum * (1 / (1.28 + (2)))- (u1 + u2)/2 ;
+        // f3 = shared_state.fsum * (1 / (1.28 + (2)))+ (u1 - u2)/2  ;
+
+        if(f_sigma_landing > 1){
+        f2 = u2 + f_sigma_landing * (1.28 / (1.28 + (2)));
+        f1 = f_sigma_landing * (1 / (1.28 + (2)))- (u1 + u2)/2 ;
+        f3 = f_sigma_landing * (1 / (1.28 + (2)))+ (u1 - u2)/2  ;
+
+        }
+
+        else{
+
+        f2 = u2 + f_sigma * (1.28 / (1.28 + (2)));
+        f1 = f_sigma * (1 / (1.28 + (2)))- (u1 + u2)/2 ;
+        f3 = f_sigma * (1 / (1.28 + (2)))+ (u1 - u2)/2  ;
+        }
+
+
         // // for outer loop control
-        f1 = (f_sigma - (u1+u2+f2_bar)) / 2;
-        f2 = u2 + f2_bar;
-        f3 = f1 + u1;
+        // f1 = (f_sigma - (u1+u2+f2_bar)) / 2;
+        // f2 = u2 + f2_bar;
+        // f3 = f1 + u1;
         ////////////////////////////////////////////////////////////
 
         //////////////////////////////
@@ -310,9 +339,9 @@ void Controller::innerLoop() {
         // f2 = u2 + shared_state.fsum * (1 / (1 + (2 * 1.28)));
         // f3 = u3 + shared_state.fsum * (1.28 / (1 + (2 * 1.28)));
 
-        (f1 < 0) ? f1 = 0 : (f1 > fmax) ? f1 = fmax : f1 = f1;
-        (f2 < 0) ? f2 = 0 : (f2 > fmax) ? f2 = fmax : f2 = f2;
-        (f3 < 0) ? f3 = 0 : (f3 > fmax) ? f3 = fmax : f3 = f3;
+        // (f1 < 0) ? f1 = 0 : (f1 > fmax) ? f1 = fmax : f1 = f1;
+        // (f2 < 0) ? f2 = 0 : (f2 > fmax) ? f2 = fmax : f2 = f2;
+        // (f3 < 0) ? f3 = 0 : (f3 > fmax) ? f3 = fmax : f3 = f3;
         //////////////////////////////
 
         // Apply control for different cases of failure
@@ -325,9 +354,15 @@ void Controller::innerLoop() {
 
         if(detected_motor == 1){
         act.control[0] = (float)nan("1");
-        act.control[1] = f2/fmax;
-        act.control[2] = f1/fmax;
-        act.control[3] = f3/fmax;
+        // act.control[1] = f2/fmax;
+        // act.control[2] = f1/fmax;
+        // act.control[3] = f3/fmax;
+
+
+
+        act.control[1] = (f2>0 ) ? sqrt(f2/fmax) : - sqrt(abs(f2/fmax));
+        act.control[2] = (f1>0 ) ? sqrt(f1/fmax) : - sqrt(abs(f1/fmax));
+        act.control[3] = (f3>0 ) ? sqrt(f3/fmax) : - sqrt(abs(f3/fmax));
 
         // act.control[1] = f2/ 14;
         // act.control[2] = f1/ 14;
