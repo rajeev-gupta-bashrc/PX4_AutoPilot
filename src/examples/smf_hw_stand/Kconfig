@@ -1,0 +1,5 @@
+menuconfig EXAMPLES_SMF_HW_STAND
+	bool "smf_hw_stand"
+	default n
+	---help---
+		Enable support for smf_hw_stand

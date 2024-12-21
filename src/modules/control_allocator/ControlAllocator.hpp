@@ -79,6 +79,9 @@
 #include <uORB/topics/vehicle_status.h>
 #include <uORB/topics/failure_detector_status.h>
 
+#include <uORB/topics/custom_actuator_motors.h>
+#include <uORB/topics/transfer_control.h>
+
 class ControlAllocator : public ModuleBase<ControlAllocator>, public ModuleParams, public px4::ScheduledWorkItem
 {
 public:
@@ -190,6 +193,14 @@ private:
 	uORB::Subscription _vehicle_status_sub{ORB_ID(vehicle_status)};
 	uORB::Subscription _vehicle_control_mode_sub{ORB_ID(vehicle_control_mode)};
 	uORB::Subscription _failure_detector_status_sub{ORB_ID(failure_detector_status)};
+
+	/////////////////
+	transfer_control_s _tfc;
+	custom_actuator_motors_s _ccmd;
+	uORB::Subscription _transfer_control_sub{ORB_ID(transfer_control)};
+	uORB::Subscription _custom_actuator_motors_sub{ORB_ID(custom_actuator_motors)};
+	/////////////////
+
 
 	matrix::Vector3f _torque_sp;
 	matrix::Vector3f _thrust_sp;

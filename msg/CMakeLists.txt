@@ -65,6 +65,7 @@ set(msg_files
 	ConfigOverrides.msg
 	ControlAllocatorStatus.msg
 	Cpuload.msg
+	CustomActuatorMotors.msg
 	DatamanRequest.msg
 	DatamanResponse.msg
 	DebugArray.msg
@@ -226,6 +227,7 @@ set(msg_files
 	TrajectoryBezier.msg
 	TrajectorySetpoint.msg
 	TrajectoryWaypoint.msg
+	TransferControl.msg
 	TransponderReport.msg
 	TuneControl.msg
 	UavcanParameterRequest.msg

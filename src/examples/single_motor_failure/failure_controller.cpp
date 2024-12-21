@@ -210,8 +210,8 @@ void Controller::innerLoop() {
     int diagonally_working_2 =  (detected_motor_index < 2) ? 3 : 1;
 
 
-    actuator_motors_s act = {};  // Zero-initialized
-    orb_advert_t act_pub_fd = orb_advertise(ORB_ID(actuator_motors), &act);
+    // actuator_motors_s act = {};  // Zero-initialized
+    // orb_advert_t act_pub_fd = orb_advertise(ORB_ID(actuator_motors), &act);
 
     int vehicle_odometry_fd = orb_subscribe(ORB_ID(vehicle_odometry));
     vehicle_odometry_s odometry;
@@ -447,8 +447,14 @@ void Controller::innerLoop() {
         state_data.x = (double)odometry.position[0];
         state_data.y = (double)odometry.position[1];
         state_data.z = (double)odometry.position[2];
-        orb_publish(ORB_ID(actuator_motors), act_pub_fd, &act);
+
+        // orb_publish(ORB_ID(actuator_motors), act_pub_fd, &act);
         orb_publish(ORB_ID(drone_state), drone_state_publisher, &state_data);
+
+        _tfc.to_manual = true;
+        _tfc.timestamp = odometry.timestamp;
+        orb_publish(ORB_ID(custom_actuator_motors), custom_actuator_motors_publisher, &act);
+        orb_publish(ORB_ID(transfer_control), transfer_control_publisher, &_tfc);
 
         // {
         // std::lock_guard<std::mutex> lock(shared_state_mutex); // Lock mutex for shared state

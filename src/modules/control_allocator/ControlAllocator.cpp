@@ -46,6 +46,10 @@
 #include <mathlib/math/Limits.hpp>
 #include <mathlib/math/Functions.hpp>
 
+#include <uORB/topics/custom_actuator_motors.h>
+#include <uORB/topics/transfer_control.h>
+
+
 using namespace matrix;
 using namespace time_literals;
 
@@ -74,6 +78,8 @@ ControlAllocator::ControlAllocator() :
 	}
 
 	parameters_updated();
+	_tfc.to_manual = false;
+
 }
 
 ControlAllocator::~ControlAllocator()
@@ -401,7 +407,7 @@ ControlAllocator::Run()
 
 	if (do_update) {
 		_last_run = now;
-
+		// printf("checking for motor failures\n");
 		check_for_motor_failures();
 
 		update_effectiveness_matrix_if_needed(EffectivenessUpdateReason::NO_EXTERNAL_UPDATE);
@@ -656,6 +662,9 @@ ControlAllocator::publish_actuator_controls()
 	if (!_publish_controls) {
 		return;
 	}
+	if(!_tfc.to_manual){
+		_transfer_control_sub.update(&_tfc);
+	}
 
 	actuator_motors_s actuator_motors;
 	actuator_motors.timestamp = hrt_absolute_time();
@@ -679,6 +688,10 @@ ControlAllocator::publish_actuator_controls()
 		int selected_matrix = _control_allocation_selection_indexes[actuator_idx];
 		float actuator_sp = _control_allocation[selected_matrix]->getActuatorSetpoint()(actuator_idx_matrix[selected_matrix]);
 		actuator_motors.control[motors_idx] = PX4_ISFINITE(actuator_sp) ? actuator_sp : NAN;
+		if(_tfc.to_manual){
+			_custom_actuator_motors_sub.update(&_ccmd);
+			actuator_motors.control[motors_idx] = PX4_ISFINITE(_ccmd.control[motors_idx]) ? _ccmd.control[motors_idx] : NAN;
+		}
 
 		if (stopped_motors & (1u << motors_idx)) {
 			actuator_motors.control[motors_idx] = NAN;
@@ -722,7 +735,7 @@ ControlAllocator::check_for_motor_failures()
 	if ((FailureMode)_param_ca_failure_mode.get() > FailureMode::IGNORE
 	    && _failure_detector_status_sub.update(&failure_detector_status)) {
 		if (failure_detector_status.fd_motor) {
-
+			printf("fd_motor is true\n");
 			if (_handled_motor_failure_bitmask != failure_detector_status.motor_failure_mask) {
 				// motor failure bitmask changed
 				switch ((FailureMode)_param_ca_failure_mode.get()) {
@@ -750,7 +763,8 @@ ControlAllocator::check_for_motor_failures()
 
 			}
 
-		} else if (_handled_motor_failure_bitmask != 0) {
+		}
+		else if (_handled_motor_failure_bitmask != 0) {
 			// Clear bitmask completely
 			PX4_INFO("Restoring all motors");
 			_handled_motor_failure_bitmask = 0;

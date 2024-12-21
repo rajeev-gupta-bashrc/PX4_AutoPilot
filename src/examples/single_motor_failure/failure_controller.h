@@ -42,6 +42,9 @@
 #include <uORB/topics/drone_state.h>
 #include <vector>
 
+#include <uORB/topics/custom_actuator_motors.h>
+#include <uORB/topics/transfer_control.h>
+
 using Matrix = std::vector<std::vector<double>>;
 using Vector = std::vector<double>;
 
@@ -74,6 +77,11 @@ public:
 
     drone_state_s state_data = {};  // Zero-initialized
     orb_advert_t drone_state_publisher = orb_advertise(ORB_ID(drone_state), &state_data);
+
+    transfer_control_s _tfc;  // Zero-initialized
+    orb_advert_t transfer_control_publisher = orb_advertise(ORB_ID(transfer_control), &_tfc);
+    custom_actuator_motors_s act = {};  // Zero-initialized
+    orb_advert_t custom_actuator_motors_publisher = orb_advertise(ORB_ID(custom_actuator_motors), &act);
 
     double nz_bar = 0.9819333920816344;
     double ny_bar = 0.1892268837006408;

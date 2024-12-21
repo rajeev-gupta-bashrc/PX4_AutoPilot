@@ -48,6 +48,7 @@ void FailureInjector::update()
 
 	while (_vehicle_command_sub.update(&vehicle_command)) {
 		if (vehicle_command.command != vehicle_command_s::VEHICLE_CMD_INJECT_FAILURE) {
+			printf("didn't get any msg\n");
 			continue;
 		}
 
