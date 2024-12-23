@@ -3,7 +3,7 @@
         "astyle.c.enable": true,
         "astyle.cpp.enable": true,
         "C_Cpp.autoAddFileAssociations": false,
-        "C_Cpp.clang_format_fallbackStyle": "none",
+        "C_Cpp.clang_format_fallbackStyle": "LLVM",
         "C_Cpp.default.browse.limitSymbolsToIncludedHeaders": true,
         "C_Cpp.default.cppStandard": "c++14",
         "C_Cpp.default.cStandard": "c11",
@@ -143,5 +143,8 @@
                 "/home/rajeev-gupta/ros2/ws_ros2/install/px4_msgs/local/lib/python3.10/dist-packages",
                 "/opt/ros/humble/lib/python3.10/site-packages",
                 "/opt/ros/humble/local/lib/python3.10/dist-packages"
-        ]
+        ],
+        "[cpp]": {
+                "editor.defaultFormatter": "xaver.clang-format"
+        }
 }
